@@ -79,9 +79,9 @@ function out = sbb(A, b, x0, opt)
 		fprintf('\n');
 
 			
-		if ( opt.verbose >= 3 )
-			plotResult(A, out, maxNorm )
-		end
+		%if ( opt.verbose >= 3 )
+		%	plotResult(A, out, maxNorm )
+		%end
 
 
             if ((out.refobj - out.obj) < opt.sigma ...
@@ -139,7 +139,7 @@ function out = sbb(A, b, x0, opt)
 
     out.obj = func(out.x);                % objective value
 
-	plotResult(A, out, maxNorm )
+	%plotResult(A, out, maxNorm )
 	
 	
     %% ------------------------------------------------

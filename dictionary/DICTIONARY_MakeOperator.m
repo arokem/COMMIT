@@ -26,7 +26,7 @@ methods
 		obj.nI = numel(KERNELS.iso);
     end
 
-    
+
     function obj = ctranspose( obj )
         obj.adjoint = 1-obj.adjoint;
 	end
@@ -42,20 +42,18 @@ methods
 		end
 	end
 
+
     function v = mtimes( obj, x )
 		global DICTIONARY KERNELS THREADS
 		if ~isa(x,'double'), x = double(x); end
         if obj.adjoint == 0
 			% A*x
 			if ( obj.size(2) ~= size(x,1) ), error('A.times(): dimensions do not match'); end
-			v = DICTIONARY_MakeOperator_A( DICTIONARY, KERNELS, THREADS, x );
-			v = v( DICTIONARY.MASKidx );
+			v = DICTIONARY_MakeOperator_A( DICTIONARY, KERNELS, x, THREADS );
 		else
 			% At*y
 			if ( obj.size(2) ~= size(x,1) ), error('At.times(): dimensions do not match'); end
-			y = zeros( [KERNELS.nS DICTIONARY.dim] );
-			y( DICTIONARY.MASKidx ) = x;
-			v = DICTIONARY_MakeOperator_At( DICTIONARY, KERNELS, y );
+			v = DICTIONARY_MakeOperator_At( DICTIONARY, KERNELS, x, THREADS );
         end
 	end
 

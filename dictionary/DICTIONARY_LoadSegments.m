@@ -52,6 +52,14 @@ clear ox oy
 
 DICTIONARY.IC.len    = fread( pDict_IC_len,    [DICTIONARY.IC.n  1], '*float32' );	% length of the segment
 
+if ( CONFIG.kernels.doNormalize )
+	% all the columns will have same length
+	for s = 1:DICTIONARY.IC.n
+		f = DICTIONARY.IC.fiber(s) + 1;
+		DICTIONARY.IC.len(s) = DICTIONARY.IC.len(s) / DICTIONARY.IC.trkLen(f);
+	end
+end
+
 fclose(pDict_IC_trkLen);
 fclose(pDict_IC_f);
 fclose(pDict_IC_vx);
@@ -62,7 +70,14 @@ fclose(pDict_IC_oy);
 fclose(pDict_IC_len);
 clear pDict_IC_*
 
-fprintf( '\t[ %d fibers and %d segments]\n', DICTIONARY.IC.nF, DICTIONARY.IC.n );
+% reorder the segments based on the "v" field
+[DICTIONARY.IC.v, idx] = sort( DICTIONARY.IC.v );
+DICTIONARY.IC.o     = DICTIONARY.IC.o( idx );
+DICTIONARY.IC.fiber = DICTIONARY.IC.fiber( idx );
+DICTIONARY.IC.len   = DICTIONARY.IC.len( idx );
+clear idx
+
+fprintf( '\t[ %d fibers and %d segments ]\n', DICTIONARY.IC.nF, DICTIONARY.IC.n );
 
 
 % extra-axonal compartments
@@ -99,7 +114,12 @@ fclose(pDict_EC_ox);
 fclose(pDict_EC_oy);
 clear pDict_EC_*
 
-fprintf( '\t[ %d segments]\n', DICTIONARY.EC.nE );
+% reorder the segments based on the "v" field
+[DICTIONARY.EC.v, idx] = sort( DICTIONARY.EC.v );
+DICTIONARY.EC.o     = DICTIONARY.EC.o( idx );
+clear idx
+
+fprintf( '\t[ %d segments ]\n', DICTIONARY.EC.nE );
 
 
 % isotropic compartment
@@ -109,11 +129,41 @@ fprintf( '\t- isotropic compartments...' );
 DICTIONARY.nV = nnz( DICTIONARY.MASK );
 [ vx, vy, vz ] = ind2sub( niiSIGNAL.hdr.dime.dim(3:5), find( DICTIONARY.MASK ) );
 DICTIONARY.ISO.v = uint32(vx-1) + DICTIONARY.dim(1) * ( uint32(vy-1) + DICTIONARY.dim(2) * uint32(vz-1) );
+
+% reorder the segments based on the "v" field
+DICTIONARY.ISO.v = sort( DICTIONARY.ISO.v );
+
 clear vx vy vz
 
-fprintf( '\t\t\t\t[ %d voxels ]\n', DICTIONARY.nV );
+fprintf( '\t[ %d voxels ]\n', DICTIONARY.nV );
+
+
+% post-processing
+% ---------------
+fprintf( '\t- post-processing...' );
 
 DICTIONARY.MASKidx = find( permute(repmat(DICTIONARY.MASK,[1 1 1 niiSIGNAL.hdr.dime.dim(2) ]),[4 1 2 3]) );
+
+idx = find( DICTIONARY.MASK );
+lut = zeros( DICTIONARY.dim, 'uint32' );
+for i = 1:numel(idx)
+    lut( idx(i) ) = (i-1)*KERNELS.nS;
+end
+
+
+for i = 1:numel(DICTIONARY.IC.v)
+    DICTIONARY.IC.v(i) = lut( DICTIONARY.IC.v(i)+1 );
+end
+for i = 1:numel(DICTIONARY.EC.v)
+    DICTIONARY.EC.v(i) = lut( DICTIONARY.EC.v(i)+1 );
+end
+for i = 1:numel(DICTIONARY.ISO.v)
+    DICTIONARY.ISO.v(i) = lut( DICTIONARY.ISO.v(i)+1 );
+end
+
+clear idx lut i
+
+fprintf( '\t\t[ OK ]\n' );
 
 
 fprintf( '   [ %.2f seconds ]\n', toc(ticID) );

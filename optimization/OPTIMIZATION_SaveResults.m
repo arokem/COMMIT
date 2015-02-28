@@ -33,6 +33,24 @@ if ( CONFIG.useReference )
 	y_est = y_est(2:end,:,:,:);
 end
 
+
+% Add back the mean
+% As in: https://github.com/nipy/dipy/blob/master/dipy/tracking/life.py#L564
+if CONFIG.doDemean
+    % Calculate the mean of S/S0 (the relative signal):
+    nii = load_untouch_nii(fullfile(CONFIG.DATA_path, 'DWI.nii'));
+    bvals = load(fullfile(CONFIG.DATA_path, 'DWI.bvals'));
+    S0 = mean(nii.img(:, :, :, bvals==0), 4);
+    diffusion_weighted = nii.img(:, :, :, bvals~=0);
+    relative_signal = double(diffusion_weighted)./repmat(S0, 1, 1, 1,...
+                    size(diffusion_weighted, 4));
+    % Permute to the shape of y_est:
+    mean_relative_signal = permute(mean(relative_signal, 4), [4, 1, 2, 3]);
+    to_add = repmat(mean_relative_signal, size(y_est, 1), 1, 1, 1);
+    y_est = y_est + to_add;
+    y_mea = y_mea + to_add;
+end
+
 % Reconstruction NRMSE
 niiERR = niiSIGNAL;
 niiERR.img = squeeze( sqrt(sum((y_mea-y_est).^2,1) ./ sum(y_mea.^2,1)) );
